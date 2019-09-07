@@ -1,6 +1,7 @@
 'use strict';
 
 var mysqlConn = require("../config/MySQLdatabase");
+const rmq = require("./RabbitMQController");
 
 exports.list_users = (req, res, next) => {
     let sql = "SELECT id \
@@ -57,7 +58,7 @@ exports.add_user = (req, res, next) => {
     let sql = "INSERT INTO user(id, nick_name, nombre_real, kudosQTY) \
                VALUES (?,?,?,?);";
                
-    let params = [req.body.id, req.body.nickname, req.body.nombre, req.body.kudos];
+    let params = [req.body.id, req.body.nickname, req.body.nombre, 0];
 
     mysqlConn.query(sql, params, function (error, rows, fields) {
         if (error) 
@@ -72,12 +73,16 @@ exports.del_user = (req, res, next) => {
                WHERE id = ?;";
                
     let params = [req.params.id];
+    const id = parseInt(req.params.id, 10);
+    var message =  JSON.stringify({operation: "delete", idRemitente: id});
 
     mysqlConn.query(sql, params, function (error, rows, fields) {
         if (error) 
             return res.status(500).send(error);
-        else 
+        else {
+            rmq.sendMessage(message);
             return res.json({deleted:true});
+        }
     });    
 };
 
